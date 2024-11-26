@@ -29,7 +29,7 @@ def main(cities, dist):
     start = time.time()
     # figure out how many processes to produce (hard code to 9 for now)
     #   will actually get at most pn - 1 searches; see ci
-    pn = 9
+    pn = 19
 
     # assume WLOG we always start at city 0
     ci = [i for i in range(min(pn,len(cities))) if i != 0]
@@ -94,15 +94,16 @@ def localSearch(max_cities,
     '''
     # coerce partial into tuple
     partial = tuple(partial)
+    # determine fixed cost of parrtial tour
+    pcost = 0
+    for c in range(len(partial)):
+        if c == len(partial) - 1:
+            break
+        pcost += dist[partial[c]][partial[c+1]]
     # figure out which cities are still unvisited
     unseen = [i for i in range(max_cities) if i not in partial]
     size = math.factorial(len(unseen))
     if len(unseen) == 0:
-        pcost = 0
-        for c in range(len(partial)):
-            if c == len(partial) - 1:
-                break
-            pcost += dist[partial[c]][partial[c+1]]
         with global_incumb.get_lock():
             for i in range(len(partial)):
                 global_incumb[i] = partial[i]
@@ -134,8 +135,8 @@ def localSearch(max_cities,
 
         logged = False
         pcount += 1
-        if spcost < inCost:
-            inCost = spcost
+        if spcost + pcost < inCost:
+            inCost = spcost + pcost
             incumbent = sp
             if log:
                 print(f's{pid} - New incumbent cost: {inCost:.2f}; {pcount/size:.2%} search complete')
@@ -156,7 +157,7 @@ def localSearch(max_cities,
                 for c in range(len(incumb)):
                     global_incumb[c] = incumb[c]
         # global_incumb = (*partial, incumbent[1:])
-        return ((*partial, incumbent[1:]), inCost)
+        return ((*partial, *incumbent[1:]), inCost)
     else:
         if minned and gic is not None:
             with global_incumb.get_lock():
@@ -250,10 +251,10 @@ if __name__ == '__main__':
     cities, dist = instGen(n)
     main(cities, dist)
 
-    gstart = time.time()
-    incmb, cst = localSearch(len(cities), dist, partial = [0], log=True)
-    gend = time.time()
-    print(f'Global serial search culminated in {gend - gstart} seconds')
-    print(f'{incmb}')
-    print(f'{cst}')
+    # gstart = time.time()
+    # incmb, cst = localSearch(len(cities), dist, partial = [0], log=True)
+    # gend = time.time()
+    # print(f'Global serial search culminated in {gend - gstart} seconds')
+    # print(f'{incmb}')
+    # print(f'{cst}')
 
